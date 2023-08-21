@@ -19,7 +19,7 @@ syncpulse_main (int argc, char *argv[])
 
   gchar * media_uri = "https://gstreamer.freedesktop.org/data/media/sintel_trailer-480p.webm";
 
-  /* Run rtsp server */
+  /* TODO: Run rtsp server */
   // run_rtsp_server (media_uri, DEFAULT_RTSP_PORT);
   // run_rtsp_server (media_uri, "8555");
   // run_rtsp_server (media_uri, "8556");
@@ -27,6 +27,8 @@ syncpulse_main (int argc, char *argv[])
 
   /* Build the pipeline */
   data = build_pipeline (media_uri, media_uri, media_uri, media_uri);
+
+  /* TODO: use rtsp uri */
   // data = build_pipeline ("rtsp://localhost:8554/test", "rtsp://localhost:8555/test", "rtsp://localhost:8556/test", "rtsp://localhost:8557/test");
 
   /* Start playing */

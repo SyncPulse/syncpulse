@@ -1,3 +1,5 @@
+/* TODO: add MPL license here */
+
 #include <gst/gst.h>
 
 #include "test-merge.h"
@@ -51,6 +53,7 @@ build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, g
   g_signal_connect (data->source3->source, "pad-added", G_CALLBACK(pad_added_handler), data->source3);
   g_signal_connect (data->source4->source, "pad-added", G_CALLBACK(pad_added_handler), data->source4);
 
+  /* TODO: insert videoresize pipeline between source and compositor */
   gst_bin_add_many (GST_BIN (data->pipeline), data->source1->source, data->source2->source, data->source3->source, data->source4->source, data->compositor, data->sink, NULL);
 
   /* Link compositor to sink */
@@ -80,15 +83,7 @@ static void pad_added_handler(GstElement *src, GstPad *new_pad, Composition *com
     g_print ("A new pad '%s' from '%s' has type '%s' which is raw video.\n", GST_PAD_NAME (new_pad), GST_ELEMENT_NAME (src), new_pad_type);
   }
 
-  // How to get width and height here?
-  // if (!gst_structure_get_int(new_pad_struct, "width", &width) ||
-  //     !gst_structure_get_int(new_pad_struct, "height", &height)) {
-  //   g_print ("Failed to get width/height in probe %d %d\n", width, height);
-  //   goto exit;
-  // }
-
-  // g_print("Width: %d, Height: %d\n", composition->size.width, composition->size.height);
-
+  /* TODO: get width and height from caps */
   composition->size.width = 854;
   composition->size.height = 480;
 
