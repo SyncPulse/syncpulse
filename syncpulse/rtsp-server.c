@@ -43,8 +43,6 @@ run_rtsp_server (gchar * media_uri, char * rtsp_server_port)
   GstRTSPServer *server;
   GstRTSPMountPoints *mounts;
   GstRTSPMediaFactoryURI *factory;
-  GOptionContext *optctx;
-  GError *error = NULL;
   gchar *uri;
 
   loop = g_main_loop_new (NULL, FALSE);
