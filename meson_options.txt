@@ -1,0 +1,3 @@
+# SyncPulse subprojects
+option('syncpulse', type : 'feature', value : 'enabled')
+
