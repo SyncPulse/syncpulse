@@ -9,4 +9,3 @@ executable('syncpulse',
            'composition.c',
            dependencies: gst_deps,
            install : true)
-
