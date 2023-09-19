@@ -2,8 +2,7 @@
 #define __RTSP_SERVER_H__
 #include <gst/gst.h>
 
-#define DEFAULT_RTSP_PORT "8554"
-
-int run_rtsp_server (gchar * media_uri, char * rtsp_server_port);
+int run_rtsp_server (char * rtsp_server_port);
+void stop_rtsp_server();
 
 #endif /*__RTSP_SERVER_H__*/

@@ -33,6 +33,8 @@ typedef struct _CustomData {
   Composition *source3;
   Composition *source4;
   GstElement *compositor;
+  GstElement *encoder;
+  GstElement *rtppay;
   GstElement *sink;
 } CustomData;
 

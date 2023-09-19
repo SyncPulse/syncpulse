@@ -20,33 +20,18 @@
 #include <gst/gst.h>
 
 #include <gst/rtsp-server/rtsp-server.h>
-#include <gst/rtsp-server/rtsp-media-factory-uri.h>
 
 #include "rtsp-server.h"
 
-static gboolean
-timeout (GstRTSPServer * server)
-{
-  GstRTSPSessionPool *pool;
-
-  pool = gst_rtsp_server_get_session_pool (server);
-  gst_rtsp_session_pool_cleanup (pool);
-  g_object_unref (pool);
-
-  return TRUE;
-}
+static GstRTSPServer *server;
+static guint server_id;
 
 int
-run_rtsp_server (gchar * media_uri, char * rtsp_server_port)
+run_rtsp_server (char * rtsp_server_port)
 {
-  GMainLoop *loop;
-  GstRTSPServer *server;
   GstRTSPMountPoints *mounts;
-  GstRTSPMediaFactoryURI *factory;
-  gchar *uri;
-
-  loop = g_main_loop_new (NULL, FALSE);
-
+  GstRTSPMediaFactory *factory;
+  
   /* create a server instance */
   server = gst_rtsp_server_new ();
   g_object_set (server, "service", rtsp_server_port, NULL);
@@ -56,47 +41,26 @@ run_rtsp_server (gchar * media_uri, char * rtsp_server_port)
   mounts = gst_rtsp_server_get_mount_points (server);
 
   /* make a URI media factory for a test stream. */
-  factory = gst_rtsp_media_factory_uri_new ();
+  factory = gst_rtsp_media_factory_new ();
+  gst_rtsp_media_factory_set_launch (factory, "( "
+  "udpsrc port=5000 "
+  "caps = \"application/x-rtp,media=(string)video,clock-rate=(int)90000,encoding-name=(string)H264\" ! "
+  "rtph264depay ! rtph264pay name=pay0 " ")");
+  gst_rtsp_media_factory_set_shared (factory, TRUE);
 
-  /* when using GStreamer as a client, one can use the gst payloader, which is
-   * more efficient when there is no payloader for the compressed format */
-  /* g_object_set (factory, "use-gstpay", TRUE, NULL); */
-
-  /* check if URI is valid, otherwise convert filename to URI if it's a file */
-  if (gst_uri_is_valid (media_uri)) {
-    uri = g_strdup (media_uri);
-  } else if (g_file_test (media_uri, G_FILE_TEST_EXISTS)) {
-    uri = gst_filename_to_uri (media_uri, NULL);
-  } else {
-    g_printerr ("Unrecognized uri argument '%s'.\n", media_uri);
-    return -1;
-  }
-
-  gst_rtsp_media_factory_uri_set_uri (factory, uri);
-  g_free (uri);
-
-  /* if you want multiple clients to see the same video, set the shared property
-   * to TRUE */
-  /* gst_rtsp_media_factory_set_shared ( GST_RTSP_MEDIA_FACTORY (factory), TRUE); */
-
-  /* attach the test factory to the /test url */
-  gst_rtsp_mount_points_add_factory (mounts, "/test",
-      GST_RTSP_MEDIA_FACTORY (factory));
+ /* attach the test factory to the mount url */
+  gst_rtsp_mount_points_add_factory (mounts, "/test", factory);
 
   /* don't need the ref to the mapper anymore */
   g_object_unref (mounts);
 
   /* attach the server to the default maincontext */
-  if (gst_rtsp_server_attach (server, NULL) == 0)
+  server_id = gst_rtsp_server_attach (server, NULL);
+  if (server_id == 0)
     goto failed;
-
-  /* do session cleanup every 2 seconds */
-  g_timeout_add_seconds (2, (GSourceFunc) timeout, server);
 
   /* start serving */
   g_print ("stream ready at rtsp://localhost:%s/test\n", rtsp_server_port);
-  g_main_loop_run (loop);
-
   return 0;
 
   /* ERRORS */
@@ -104,5 +68,21 @@ failed:
   {
     g_print ("failed to attach the server\n");
     return -1;
+  }
+}
+
+void stop_rtsp_server()
+{
+  g_source_remove (server_id);
+  GstRTSPMountPoints *mounts;
+  mounts = gst_rtsp_server_get_mount_points(server);
+  gst_rtsp_mount_points_remove_factory (mounts, "/test");
+  g_object_unref (mounts);
+
+  int serv_ref_cnt = GST_OBJECT_REFCOUNT_VALUE(server);
+  int i;
+  for (i = 0; i < serv_ref_cnt; i++)
+  {
+    g_object_unref(server);
   }
 }
