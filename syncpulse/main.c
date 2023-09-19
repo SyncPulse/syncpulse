@@ -7,6 +7,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  **/
 
+/*
+pipeline for rtsp server test
+gst-launch-1.0 uridecodebin uri=rtspt://127.0.0.1:8554/test ! autovideosink
+*/
+
 #include <gst/gst.h>
 
 #ifdef __APPLE__
@@ -16,12 +21,51 @@
 #include "rtsp-server.h"
 #include "composition.h"
 
+static gboolean my_bus_callback (GstBus *bus, GstMessage *message, gpointer data)
+{
+  GMainLoop* loop = (GMainLoop*)data;
+
+  switch (GST_MESSAGE_TYPE (message)) {
+    case GST_MESSAGE_ERROR: {
+      GError *err;
+      gchar *debug;
+      gst_message_parse_error (message, &err, &debug);
+      g_print ("Error: %s\n", err->message);
+      g_error_free (err);
+      g_free (debug);
+      g_main_loop_quit (loop);
+      break;
+    }
+    case GST_MESSAGE_EOS:
+      g_print ("Got %s message\n", GST_MESSAGE_TYPE_NAME (message));
+      /* end-of-stream */
+      g_main_loop_quit (loop);
+      break;
+    default:
+      /* unhandled message */
+      break;
+  }
+  /* we want to be notified again the next time there is a message
+  * on the bus, so returning TRUE (FALSE means we want to stop watching
+  * for messages on the bus and our callback should not be called again)
+  */
+  return TRUE;
+}
+
 int
 syncpulse_main (int argc, char *argv[])
 {
+  GMainLoop *loop;
   CustomData *data;
   GstBus *bus;
-  GstMessage *msg;
+
+  if(run_rtsp_server("8554") != 0)
+  {
+    g_print ("failed to run rtsp server\n");
+    return -1;
+  }
+
+  loop = g_main_loop_new (NULL, FALSE);
 
   /* Initialize GStreamer */
   gst_init (&argc, &argv);
@@ -39,18 +83,11 @@ syncpulse_main (int argc, char *argv[])
 
   /* Wait until error or EOS */
   bus = gst_element_get_bus (data->pipeline);
-  msg = gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
-
-  if (GST_MESSAGE_TYPE (msg) == GST_MESSAGE_ERROR) {
-    g_error ("An error occurred! Re-run with the GST_DEBUG=*:WARN environment "
-        "variable set for more details.");
-  }
-
-  /* Free resources */
-  if (msg != NULL) {
-    gst_message_unref (msg);
-  }
+  gst_bus_add_watch (bus, my_bus_callback, loop);
   gst_object_unref (bus);
+  
+  g_main_loop_run (loop);
+  
   gst_object_unref (data->source1->compositor_pad);
   gst_object_unref (data->source2->compositor_pad);
   gst_object_unref (data->source3->compositor_pad);
@@ -58,6 +95,7 @@ syncpulse_main (int argc, char *argv[])
   gst_element_set_state (data->pipeline, GST_STATE_NULL);
   gst_object_unref (data->pipeline);
   free(data);
+  stop_rtsp_server();
   return 0;
 }
 

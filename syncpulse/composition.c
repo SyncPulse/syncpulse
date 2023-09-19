@@ -37,13 +37,17 @@ build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, g
     1, 1,
     data->compositor
   );
-  data->sink = gst_element_factory_make ("autovideosink", "sink");
+  data->encoder = gst_element_factory_make("x264enc", "encoder");
+  data->rtppay = gst_element_factory_make("rtph264pay", "rtppay");
+  data->sink = gst_element_factory_make ("udpsink", "sink");
 
   data->pipeline = gst_pipeline_new ("test-pipeline");
 
   if (!data->pipeline ||
       !data->source1->source || !data->source2->source || !data->source3->source || !data->source4->source ||
       !data->compositor ||
+      !data->encoder ||
+      !data->rtppay ||
       !data->sink) {
     g_printerr ("Not all elements could be created.\n");
     return data;
@@ -54,6 +58,10 @@ build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, g
   g_object_set (data->source3->source, "uri", source3_uri, NULL);
   g_object_set (data->source4->source, "uri", source4_uri, NULL);
 
+  g_object_set (data->encoder, "tune", 0x04 /* zero-latency */, "bitrate", 8192, "key-int-max", 30, NULL);
+
+  g_object_set (data->sink, "host", "127.0.0.1", "port", 5000, NULL);
+
   /* Link sources to compositor */
   g_signal_connect (data->source1->source, "pad-added", G_CALLBACK(pad_added_handler), data->source1);
   g_signal_connect (data->source2->source, "pad-added", G_CALLBACK(pad_added_handler), data->source2);
@@ -61,10 +69,10 @@ build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, g
   g_signal_connect (data->source4->source, "pad-added", G_CALLBACK(pad_added_handler), data->source4);
 
   /* TODO: insert videoresize pipeline between source and compositor */
-  gst_bin_add_many (GST_BIN (data->pipeline), data->source1->source, data->source2->source, data->source3->source, data->source4->source, data->compositor, data->sink, NULL);
+  gst_bin_add_many (GST_BIN (data->pipeline), data->source1->source, data->source2->source, data->source3->source, data->source4->source, data->compositor, data->encoder, data->rtppay, data->sink, NULL);
 
-  /* Link compositor to sink */
-  gst_element_link (data->compositor, data->sink);
+  /* Link from compositor to sink */
+  gst_element_link_many (data->compositor, data->encoder, data->rtppay, data->sink, NULL);
 
   return data;
 }
