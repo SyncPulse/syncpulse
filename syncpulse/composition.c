@@ -13,8 +13,8 @@
 
 // build pipeline
 CustomData *
-build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, gchar * source4_uri) {
-  CustomData * data = malloc(sizeof(CustomData));
+build_pipeline (Argument *argument) {
+  CustomData *data = malloc(sizeof(CustomData));
 
   data->compositor = gst_element_factory_make ("compositor", "compositor");
   data->source1 = new_composition(
@@ -53,14 +53,14 @@ build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, g
     return data;
   }
 
-  g_object_set (data->source1->source, "uri", source1_uri, NULL);
-  g_object_set (data->source2->source, "uri", source2_uri, NULL);
-  g_object_set (data->source3->source, "uri", source3_uri, NULL);
-  g_object_set (data->source4->source, "uri", source4_uri, NULL);
+  g_object_set (data->source1->source, "uri", argument->media_uri, NULL);
+  g_object_set (data->source2->source, "uri", argument->media_uri, NULL);
+  g_object_set (data->source3->source, "uri", argument->media_uri, NULL);
+  g_object_set (data->source4->source, "uri", argument->media_uri, NULL);
 
-  g_object_set (data->encoder, "tune", 0x04 /* zero-latency */, "bitrate", 8192, "key-int-max", 30, NULL);
+  g_object_set (data->encoder, "tune", 0x04 /* zero-latency */, "bitrate", argument->bitrate, "key-int-max", 30, NULL);
 
-  g_object_set (data->sink, "host", "127.0.0.1", "port", 5000, NULL);
+  g_object_set (data->sink, "host", argument->udp_bind_address, "port", argument->udp_port, NULL);
 
   /* Link sources to compositor */
   g_signal_connect (data->source1->source, "pad-added", G_CALLBACK(pad_added_handler), data->source1);
