@@ -27,14 +27,14 @@ static GstRTSPServer *server;
 static guint server_id;
 
 int
-run_rtsp_server (char * rtsp_server_port)
+run_rtsp_server (Argument *argument)
 {
   GstRTSPMountPoints *mounts;
   GstRTSPMediaFactory *factory;
   
   /* create a server instance */
   server = gst_rtsp_server_new ();
-  g_object_set (server, "service", rtsp_server_port, NULL);
+  g_object_set (server, "service", argument->rtsp_port, NULL);
 
   /* get the mount points for this server, every server has a default object
    * that be used to map uri mount points to media factories */
@@ -42,14 +42,17 @@ run_rtsp_server (char * rtsp_server_port)
 
   /* make a URI media factory for a test stream. */
   factory = gst_rtsp_media_factory_new ();
-  gst_rtsp_media_factory_set_launch (factory, "( "
-  "udpsrc port=5000 "
+  GString* launchString = g_string_new(NULL);
+  g_string_printf(launchString, "( "
+  "udpsrc address=%s port=%d "
   "caps = \"application/x-rtp,media=(string)video,clock-rate=(int)90000,encoding-name=(string)H264\" ! "
-  "rtph264depay ! rtph264pay name=pay0 " ")");
+  "rtph264depay ! rtph264pay name=pay0 " ")", argument->udp_bind_address, argument->udp_port);
+  gst_rtsp_media_factory_set_launch (factory, launchString->str);
+  g_string_free(launchString, TRUE);
   gst_rtsp_media_factory_set_shared (factory, TRUE);
 
  /* attach the test factory to the mount url */
-  gst_rtsp_mount_points_add_factory (mounts, "/test", factory);
+  gst_rtsp_mount_points_add_factory (mounts, argument->rtsp_mount, factory);
 
   /* don't need the ref to the mapper anymore */
   g_object_unref (mounts);
@@ -60,7 +63,7 @@ run_rtsp_server (char * rtsp_server_port)
     goto failed;
 
   /* start serving */
-  g_print ("stream ready at rtsp://localhost:%s/test\n", rtsp_server_port);
+  g_print ("stream ready at rtsp://localhost:%s%s\n", argument->rtsp_port, argument->rtsp_mount);
   return 0;
 
   /* ERRORS */

@@ -10,6 +10,7 @@
 #ifndef __COMPOSITION_H__
 #define __COMPOSITION_H__
 #include <gst/gst.h>
+#include "argument.h"
 
 /* Structure to contain all our information, so we can pass it to callbacks */
 typedef struct _Size {
@@ -49,7 +50,7 @@ new_composition (GstElement *source, int xpos, int ypos, GstElement *compositor)
   return comp;
 }
 
-CustomData * build_pipeline (gchar * source1_uri, gchar * source2_uri, gchar * source3_uri, gchar * source4_uri);
+CustomData * build_pipeline (Argument *argument);
 
 static void pad_added_handler (GstElement *src, GstPad *new_pad, Composition *composition);
 
